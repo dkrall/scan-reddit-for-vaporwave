@@ -26,23 +26,66 @@ def main():
 
     # TODO: This is just here for now to test calling the API and generating files in response.
     # Eventually, we will likely have looping API calls.
-    test_execute_api_call_w_requests('temp.txt', access_token)
+    # execute_api_call_w_requests(access_token, "/api/v1/me")
+
+    process_new_posts(access_token)
 
     #response = requests.get("http://api.reddit.com/api/search_reddit_names?query=ImaginaryArchitecture.json")
     #print(response.status_code)
     #print(response.json())
 
-# TODO: Not sure whether this or the CURL version will be more useful in the final implementation, hence the "test" prefix.
-# Executes an API call using requests.get. Returns the contents. Prints an error if response code is not 200.
-def test_execute_api_call_w_requests(filename, token):
-    console_command = """
-        curl -H POST -d 'Authorization: bearer %s' -A "ChangeMeClient/0.1 by YourUsername" https://oauth.reddit.com/api/v1/me > temp/%s
-    """ % (token, filename)
+def process_new_posts(token):
+    filenumber = 0
+    num_errors = 0
+    error_file = open('output/errors.txt', 'w')
+    # Reddit calls everything a "thing." We'll go with their naming scheme.
+    # TODO: Update this with before and after for pagination to iterate.
+    new_things = execute_api_call_w_requests(token, '/r/ImaginaryArchitecture/new?limit=100')
 
+    for thing in new_things['data']['children']:
+        url = thing['data']['url']
+        filename = 'temp/' + str(filenumber) + '.png'
+        num_errors += download_image_file_from_url(url, filename, error_file)
+        filenumber += 1
+
+    print("Completed batch with " + str(num_errors) + " errors.\n")
+    error_file.close()
+
+def download_image_file_from_url(url, filepath, error_file):
+    file_exists = False
+    error_ind = 0
+    max_retries = 10
+    num_retries = -1
+    num_loops = 3
+    num_loops_before_retry = 3
+
+    console_command = """curl '%s' > %s""" % (url, filepath)
+
+    while not file_exists and error_ind != 1:
+        if num_loops >= num_loops_before_retry:
+            os.system(console_command)
+            num_retries += 1
+            num_loops = 0
+
+        file_exists = os.path.isfile(filepath)
+        num_loops += 1
+
+        if num_retries >= num_loops_before_retry:
+            error_file.write('Failed to create file for' + filepath + '. Exceeded maximum retries.\n')
+            error_ind = 1
+
+        if not file_exists:
+            time.sleep(1)
+
+    return error_ind
+
+
+# Executes an API call using requests.get. Returns the contents. Prints an error if response code is not 200.
+def execute_api_call_w_requests(token, url):
     authorization = "bearer %s" % (token)
 
     headers = {"Authorization": authorization, "User-Agent": "ChangeMeClient/0.1 by YourUsername"}
-    response = requests.get("https://oauth.reddit.com/api/v1/me", headers=headers)
+    response = requests.get("https://oauth.reddit.com" + url, headers=headers)
 
     if response.status_code != 200:
         print('Request unsuccessful:')
