@@ -13,3 +13,4 @@ Todos:
  - Keep track of the ids of images from previous runs so that the program does not cover ground it has already covered.
  - Implement Pandas to do big data operations more efficiently.
  - Use an API call to locate the appropriate subreddit (or subreddits plural). This will only be needed if expanding the program at some point in the future.
+ - Horizontal stripe method looks most promising. Use output from compile_stats_for_ideal_vaporwave_images.py to determine best guide values, then test. Implement the check_for_vaporwave_codes function based on these values, using a config file to make values easy to switch out.
