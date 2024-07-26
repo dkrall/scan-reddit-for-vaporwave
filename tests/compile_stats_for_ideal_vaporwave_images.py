@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 import os
 import sys
+from config import config_horizontal_search
 import numpy as np
 from PIL import Image
+
+RED_INDEX = 0
+GREEN_INDEX = 1
+BLUE_INDEX = 2
 
 #arr_averages_by_four_corners_ten_pixels = []
 #arr_averages_by_four_corners_forty_pixels = []
@@ -63,11 +68,12 @@ def arr_averages_by_horizontal(int_param):
         sample_pixels = image_array[int_param]
 
         stats = get_array_stats(sample_pixels)
-        print_stats(filename, stats)
+        #print_stats(filename, stats)
+        print_verdict(filename, stats)
         all_stats.append(stats)
 
     stats = aggregate_stats_for_multiple_files(all_stats)
-    print_stats('aggregate of all files', stats)
+    #print_stats('aggregate of all files', stats)
 
 
 def arr_averages_by_four_corners(int_param):
@@ -86,6 +92,25 @@ def print_stats(filename, stats):
         for key in stat_keys:
             print(str(color_names[color]) + ' ' + key + ': ' + str(stats[key][color]))
     print('')
+
+
+def print_verdict(filename, stats):
+    MIN_INDEX = 0
+    MAX_INDEX = 1
+
+    ranges = config_horizontal_search()
+    verdict = True
+    verdict_string = "Fails"
+
+    for color in [RED_INDEX, GREEN_INDEX, BLUE_INDEX]:
+        min = ranges[color][MIN_INDEX]
+        max = ranges[color][MAX_INDEX]
+        verdict = verdict and min < stats['avgs'][color] and max > stats['avgs'][color]
+
+    if verdict:
+        verdict_string = "Passes"
+
+    print(filename + ': ' + verdict_string)
 
 
 def aggregate_stats_for_multiple_files(stats):

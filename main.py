@@ -3,6 +3,7 @@ import requests
 import os
 import time
 from datetime import datetime, timedelta
+from compile_stats_for_ideal_vaporwave_images import is_file_vaporwave
 import json
 import numpy as np
 from PIL import Image
@@ -46,42 +47,33 @@ def process_new_posts(token):
 
     for thing in new_things['data']['children']:
         url = thing['data']['url']
-        filename = 'temp/' + str(filenumber) + '.png'
-        error_ind = download_image_file_from_url(url, filename, error_file)
+        filename = datetime.now().strftime("%m-%d-%Y_%H:%M:%S") + str(filenumber)
+        filepath = 'temp/' + filename + '.png'
+        error_ind = download_image_file_from_url(url, filepath, error_file)
 
-        if error_ind == 0:
-            # TODO: Assign output to boolean to determine if the image is plausibly
-            # vaporwave
-            check_for_vaporwave_codes(filename)
+        if error_ind == 0 and is_file_vaporwave(filepath):
+            move_file_to_output(filename)
 
         num_errors += error_ind
         filenumber += 1
 
+    #TODO: Delete files from temp after moving all vaporwave images to output
     print("Completed batch with " + str(num_errors) + " errors.\n")
     error_file.close()
 
-# TODO: This function is not fully implemented. It will need to open the image,
-# analyze a sampling of pixels (maybe four pixels 10px off in x and y directions
-# from each corner?) and return a boolean value for whether the picture is vaporwave.
-def check_for_vaporwave_codes(filename):
-    img = Image.open(filename)
-    image_array = np.array(img)
-    height, width, channels = image_array.shape
 
-    # 1 channel images are greyscale
-    if channels < 2:
-        return false
+def filepath(filename, is_temp):
+    folder = 'output/'
 
-    sample_pixels = [
-        image_array[9, 9],
-        image_array[9, width - 10],
-        image_array[height - 10, 9],
-        image_array[height - 10, width - 10],
-    ]
+    if is_temp:
+        folder = 'temp/'
 
-    for pixel in sample_pixels:
-        print(pixel)
-    print('')
+    return folder + filename + '.png'
+
+
+def move_file_to_output(filename):
+    os.replace(filepath(filename, True), filepath(filename, False))
+
 
 def download_image_file_from_url(url, filepath, error_file):
     file_exists = False
